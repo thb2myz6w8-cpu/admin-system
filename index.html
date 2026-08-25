@@ -1,410 +1,71 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="zh-CN">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <meta name="theme-color" content="#0ea5e9">
-    <title>现代化通用后台管理系统</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        /* 性能优化：不要对所有元素应用全局过渡（会在低端手机上导致卡顿） */
-        /* 只在交互元素上使用轻量过渡，并支持 prefers-reduced-motion */
-        :where(button, .form-input, a) {
-            transition: background-color 160ms ease, color 160ms ease, box-shadow 160ms ease;
-        }
-        @media (prefers-reduced-motion: reduce) {
-            :where(button, .form-input, a) { transition: none !important; }
-        }
-
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;
-            background-color: #f8fafc;
-            color: #0f172a;
-        }
-
-        .sidebar-nav button:hover {
-            background-color: rgba(59, 130, 246, 0.06);
-        }
-
-        table tbody tr:hover {
-            background-color: #f9fafb;
-        }
-
-        .form-input:focus {
-            border-color: rgb(59, 130, 246);
-            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.08);
-        }
-
-        /* 手机友好：增大可点区域 */
-        .touch-lg { padding: 0.75rem 1rem; border-radius: 0.75rem; }
-
-        /* 简化首屏布局以加快渲染 */
-        .center-card { display:flex; align-items:center; justify-content:center; min-height:100vh; }
-        .card { width:100%; max-width:420px; margin:16px; }
-    </style>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>管理后台（前端版）</title>
+  <meta name="theme-color" content="#0ea5e9" />
+  <style>
+    :root{--bg:#f8fafc;--card:#fff;--muted:#6b7280;--primary:#0ea5e9;--danger:#ef4444;--radius:12px}
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial;background:var(--bg);color:#0f172a;-webkit-font-smoothing:antialiased}
+    .container{max-width:1100px;margin:18px auto;padding:16px}
+    .card{background:var(--card);border-radius:var(--radius);box-shadow:0 4px 18px rgba(2,6,23,0.06);padding:16px}
+    header{display:flex;gap:12px;align-items:center;justify-content:space-between;margin-bottom:16px}
+    h1{font-size:18px;margin:0}
+    .muted{color:var(--muted);font-size:13px}
+    .flex{display:flex;gap:12px;align-items:center}
+    .col{display:flex;flex-direction:column;gap:8px}
+    input[type="text"],input[type="password"],textarea,select{width:100%;padding:10px;border:1px solid #e6e9ef;border-radius:10px;font-size:14px}
+    button{cursor:pointer;border:0;padding:10px 12px;border-radius:10px;font-weight:600}
+    .btn-primary{background:var(--primary);color:#fff}
+    .btn-ghost{background:transparent;border:1px solid #e6e9ef}
+    .btn-danger{background:var(--danger);color:#fff}
+    table{width:100%;border-collapse:collapse;font-size:14px}
+    th,td{padding:10px;border-bottom:1px solid #f1f5f9;text-align:left}
+    .mobile-stack{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    @media (max-width:720px){.mobile-stack{grid-template-columns:1fr}header{flex-direction:column;align-items:flex-start}}
+    .small{font-size:13px;color:var(--muted)}.badge{background:#eef2ff;color:#1e3a8a;padding:6px 8px;border-radius:999px;font-weight:600}
+    .row{display:flex;gap:12px;align-items:center}.spacer{flex:1}.link{color:var(--primary);text-decoration:underline;cursor:pointer}.actions{display:flex;gap:8px;align-items:center}.topbar{display:flex;gap:8px;align-items:center}footer{margin-top:18px;color:var(--muted);font-size:13px;text-align:center}.note{background:#fff8f0;border:1px solid #fde8d6;padding:10px;border-radius:8px}
+  </style>
 </head>
-<body class="bg-gray-50">
+<body>
+  <div class="container">
     <div id="app"></div>
+    <footer>纯前端演示 · 管理员功能（作品管理 / 会员查看）· 数据保存在浏览器 localStorage</footer>
+  </div>
 
-    <script>
-        // 尝试从 localStorage 恢复登录状态（快速登录）
-        const savedLogin = localStorage.getItem('isLoggedIn');
+  <script>
+  // Frontend admin app with improved security checks
+  const KEY_ADMIN_HASH = 'admin:hash';
+  const KEY_LOGGED = 'admin:logged';
+  const KEY_WORKS = 'admin:works';
+  const KEY_MEMBERS = 'admin:members';
 
-        // 应用状态管理
-        const AppState = {
-            isLoggedIn: savedLogin === '1',
-            password: '',
-            activeTab: 'works',
-            works: [
-                { id: 1, title: "Next.js 15 全栈实战视频", author: "张三", coverUrl: "https://via.placeholder.com/150" },
-                { id: 2, title: "Tailwind CSS 极速布局技巧", author: "李四", coverUrl: "https://via.placeholder.com/150" },
-                { id: 3, title: "TypeScript 从入门到精通", author: "王五", coverUrl: "https://via.placeholder.com/150" }
-            ],
-            members: [
-                { id: 1, username: "Alice", email: "alice@example.com", joinDate: "2026-06-01" },
-                { id: 2, username: "Bob", email: "bob@example.com", joinDate: "2026-06-05" },
-                { id: 3, username: "Charlie", email: "charlie@example.com", joinDate: "2026-07-10" },
-                { id: 4, username: "Diana", email: "diana@example.com", joinDate: "2026-08-01" }
-            ],
-            newTitle: '',
-            newAuthor: '',
-            newCover: ''
-        };
+  function q(sel){return document.querySelector(sel)}
+  function nowISO(){return new Date().toISOString().slice(0,10)}
 
-        // 事件处理器
-        const handlers = {
-            handleLogin: (e) => {
-                e && e.preventDefault();
-                if (AppState.password === 'admin123') {
-                    AppState.isLoggedIn = true;
-                    try { localStorage.setItem('isLoggedIn', '1'); } catch (err) { /* ignore */ }
-                    render();
-                } else {
-                    alert('❌ 密码错误！正确密码是：admin123');
-                }
-            },
+  async function sha256Hex(str){const enc=new TextEncoder().encode(str);const hash=await crypto.subtle.digest('SHA-256',enc);const bytes=Array.from(new Uint8Array(hash));return bytes.map(b=>b.toString(16).padStart(2,'0')).join('')}
+  function saveJSON(k,v){localStorage.setItem(k,JSON.stringify(v))}
+  function loadJSON(k,def){try{const t=localStorage.getItem(k);return t?JSON.parse(t):def}catch(e){return def}}
 
-            handleLogout: () => {
-                if (confirm('确定要退出登录吗？')) {
-                    AppState.isLoggedIn = false;
-                    AppState.password = '';
-                    try { localStorage.removeItem('isLoggedIn'); } catch (err) { /* ignore */ }
-                    render();
-                }
-            },
+  function seedIfEmpty(){if(!localStorage.getItem(KEY_WORKS)){saveJSON(KEY_WORKS,[{id:Date.now(),title:'Next.js 全栈实战',author:'张三',cover:'https://via.placeholder.com/120',created:nowISO()}])}
+  if(!localStorage.getItem(KEY_MEMBERS)){saveJSON(KEY_MEMBERS,[{id:1,username:'alice',email:'alice@example.com',joined:'2026-06-01'},{id:2,username:'bob',email:'bob@example.com',joined:'2026-06-05'}])}}
 
-            handleAddWork: (e) => {
-                e.preventDefault();
-                if (!AppState.newTitle.trim() || !AppState.newAuthor.trim()) {
-                    alert('⚠️ 请填写完整的作品信息！');
-                    return;
-                }
+  async function isPasswordSet(){return !!localStorage.getItem(KEY_ADMIN_HASH)}
+  async function checkLogin(){return localStorage.getItem(KEY_LOGGED) === '1'}
 
-                const newWork = {
-                    id: Date.now(),
-                    title: AppState.newTitle,
-                    author: AppState.newAuthor,
-                    coverUrl: AppState.newCover || 'https://via.placeholder.com/150'
-                };
+  async function loginWithPassword(pwd){const stored=localStorage.getItem(KEY_ADMIN_HASH);if(!stored) return false;const h=await sha256Hex(pwd);if(h===stored){localStorage.setItem(KEY_LOGGED,'1');return true}return false}
+  async function setAdminPassword(pwd){const h=await sha256Hex(pwd);localStorage.setItem(KEY_ADMIN_HASH,h);localStorage.setItem(KEY_LOGGED,'1')}
+  function logout(){localStorage.removeItem(KEY_LOGGED);render()}
 
-                AppState.works.unshift(newWork);
-                AppState.newTitle = '';
-                AppState.newAuthor = '';
-                AppState.newCover = '';
-                alert('✅ 作品上传成功！');
-                render();
-            },
+  function getWorks(){return loadJSON(KEY_WORKS,[])}
+  function saveWorks(ws){saveJSON(KEY_WORKS,ws)}
+  function getMembers(){return loadJSON(KEY_MEMBERS,[])}
+  function saveMembers(ms){saveJSON(KEY_MEMBERS,ms)}
 
-            handleDeleteWork: (id) => {
-                if (confirm('确定要删除这个作品吗？')) {
-                    AppState.works = AppState.works.filter(work => work.id !== id);
-                    alert('✅ 作品已删除！');
-                    render();
-                }
-            },
+  // client state for form inputs
+  const State = { newTitle:'', newAuthor:'', newCover:'' }
 
-            setPassword: (value) => {
-                AppState.password = value;
-            },
-
-            setNewTitle: (value) => {
-                AppState.newTitle = value;
-            },
-
-            setNewAuthor: (value) => {
-                AppState.newAuthor = value;
-            },
-
-            setNewCover: (value) => {
-                AppState.newCover = value;
-            },
-
-            setActiveTab: (tab) => {
-                AppState.activeTab = tab;
-                render();
-            }
-        };
-
-        // 登录界面（轻量，为手机优化）
-        const LoginPage = () => `
-            <div class="center-card">
-                <div class="card bg-white rounded-lg shadow-xl p-6">
-                    <div class="text-center mb-4">
-                        <h1 class="text-2xl font-bold text-gray-900 mb-1">🔐 管理后台</h1>
-                        <p class="text-sm text-gray-600">便捷的移动端登录</p>
-                    </div>
-
-                    <form onsubmit="handlers.handleLogin(event)">
-                        <div class="mb-4">
-                            <label class="block text-sm font-medium text-gray-700 mb-2">管理员密码</label>
-                            <input
-                                type="password"
-                                placeholder="请输入密码"
-                                value="${AppState.password}"
-                                oninput="handlers.setPassword(this.value)"
-                                class="form-input w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none"
-                                autocomplete="current-password"
-                                autocapitalize="off"
-                                inputmode="text"
-                                required
-                            />
-                        </div>
-
-                        <button
-                            type="submit"
-                            class="w-full bg-blue-600 text-white font-semibold touch-lg rounded-lg hover:bg-blue-700"
-                        >
-                            登录系统
-                        </button>
-                    </form>
-
-                    <div class="mt-4 text-center text-xs text-gray-500">
-                        测试密码：admin123
-                    </div>
-                </div>
-            </div>
-        `;
-
-        // 主界面
-        const MainPage = () => `
-            <div class="min-h-screen bg-gray-50 flex">
-                <!-- 侧边栏 -->
-                <aside class="w-64 bg-white border-r border-gray-200 hidden md:block">
-                    <div class="p-6">
-                        <h1 class="text-2xl font-bold text-gray-900 mb-2">📊 管理后台</h1>
-                        <p class="text-sm text-gray-600 mb-8">现代化通用后台管理系统</p>
-
-                        <nav class="sidebar-nav space-y-2">
-                            <button
-                                onclick="handlers.setActiveTab('works')"
-                                class="w-full text-left px-4 py-2 rounded-lg font-medium transition-all ${
-                                    AppState.activeTab === 'works'
-                                        ? 'bg-blue-50 text-blue-600 border-l-4 border-blue-600'
-                                        : 'text-gray-700 hover:bg-gray-100'
-                                }"
-                            >
-                                🎬 作品管理
-                            </button>
-                            <button
-                                onclick="handlers.setActiveTab('members')"
-                                class="w-full text-left px-4 py-2 rounded-lg font-medium transition-all ${
-                                    AppState.activeTab === 'members'
-                                        ? 'bg-blue-50 text-blue-600 border-l-4 border-blue-600'
-                                        : 'text-gray-700 hover:bg-gray-100'
-                                }"
-                            >
-                                👥 会员管理
-                            </button>
-                        </nav>
-                    </div>
-
-                    <div class="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-gray-50 to-transparent border-t border-gray-200">
-                        <button
-                            onclick="handlers.handleLogout()"
-                            class="w-full bg-red-600 text-white font-medium py-2 px-4 rounded-lg hover:bg-red-700 transition-colors text-sm"
-                        >
-                            🚪 退出登录
-                        </button>
-                    </div>
-                </aside>
-
-                <!-- 主内容区域 -->
-                <main class="flex-1 p-4 md:p-8 overflow-auto">
-                    ${AppState.activeTab === 'works' ? WorksPage() : MembersPage()}
-                </main>
-            </div>
-        `;
-
-        // 作品管理页面
-        const WorksPage = () => `
-            <div>
-                <div class="mb-4 md:mb-8">
-                    <h2 class="text-2xl md:text-3xl font-bold text-gray-900 mb-2">作品上传与管理</h2>
-                    <p class="text-gray-600">管理和发布在线教程和学习资源</p>
-                </div>
-
-                <!-- 上传表单 -->
-                <form onsubmit="handlers.handleAddWork(event)" class="bg-white rounded-lg shadow p-4 md:p-6 mb-6">
-                    <h3 class="text-lg font-semibold text-gray-900 mb-4">📤 上传新作品</h3>
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4 items-end">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">作品标题 *</label>
-                            <input
-                                type="text"
-                                value="${AppState.newTitle}"
-                                oninput="handlers.setNewTitle(this.value)"
-                                placeholder="输入作品标题"
-                                class="form-input w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none"
-                                required
-                            />
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">作者名称 *</label>
-                            <input
-                                type="text"
-                                value="${AppState.newAuthor}"
-                                oninput="handlers.setNewAuthor(this.value)"
-                                placeholder="输入作者名称"
-                                class="form-input w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none"
-                                required
-                            />
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">封面URL</label>
-                            <input
-                                type="text"
-                                value="${AppState.newCover}"
-                                oninput="handlers.setNewCover(this.value)"
-                                placeholder="可选，留空使用默认"
-                                class="form-input w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none"
-                            />
-                        </div>
-                    </div>
-                    <div class="mt-4">
-                        <button
-                            type="submit"
-                            class="bg-green-600 text-white font-semibold py-2 px-6 rounded-lg hover:bg-green-700 transition-colors"
-                        >
-                            ✨ 上传作品
-                        </button>
-                    </div>
-                </form>
-
-                <!-- 作品列表 -->
-                <div class="bg-white rounded-lg shadow overflow-hidden">
-                    <div class="px-4 py-3 border-b border-gray-200">
-                        <h3 class="text-lg font-semibold text-gray-900">作品列表 (共 ${AppState.works.length} 个)</h3>
-                    </div>
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-sm">
-                            <thead class="bg-gray-50 border-b border-gray-200">
-                                <tr>
-                                    <th class="px-4 py-3 text-left font-semibold text-gray-900">ID</th>
-                                    <th class="px-4 py-3 text-left font-semibold text-gray-900">作品标题</th>
-                                    <th class="px-4 py-3 text-left font-semibold text-gray-900">作者</th>
-                                    <th class="px-4 py-3 text-left font-semibold text-gray-900">封面</th>
-                                    <th class="px-4 py-3 text-left font-semibold text-gray-900">操作</th>
-                                </tr>
-                            </thead>
-                            <tbody class="divide-y divide-gray-200">
-                                ${AppState.works.map(work => `
-                                    <tr>
-                                        <td class="px-4 py-3 text-gray-600">${work.id}</td>
-                                        <td class="px-4 py-3 font-medium text-gray-900">${work.title}</td>
-                                        <td class="px-4 py-3 text-gray-600">${work.author}</td>
-                                        <td class="px-4 py-3">
-                                            <a href="${work.coverUrl}" target="_blank" class="text-blue-600 hover:underline">查看图片</a>
-                                        </td>
-                                        <td class="px-4 py-3">
-                                            <button
-                                                onclick="handlers.handleDeleteWork(${work.id})"
-                                                class="text-red-600 hover:text-red-800 hover:underline font-medium"
-                                            >
-                                                🗑️ 删除
-                                            </button>
-                                        </td>
-                                    </tr>
-                                `).join('')}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        `;
-
-        // 会员管理页面
-        const MembersPage = () => `
-            <div>
-                <div class="mb-4 md:mb-8">
-                    <h2 class="text-2xl md:text-3xl font-bold text-gray-900 mb-2">注册会员管理</h2>
-                    <p class="text-gray-600">查看和管理系统中的所有注册会员</p>
-                </div>
-
-                <div class="bg-white rounded-lg shadow overflow-hidden">
-                    <div class="px-4 py-3 border-b border-gray-200">
-                        <h3 class="text-lg font-semibold text-gray-900">会员列表 (共 ${AppState.members.length} 位)</h3>
-                    </div>
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-sm">
-                            <thead class="bg-gray-50 border-b border-gray-200">
-                                <tr>
-                                    <th class="px-4 py-3 text-left font-semibold text-gray-900">会员ID</th>
-                                    <th class="px-4 py-3 text-left font-semibold text-gray-900">用户名</th>
-                                    <th class="px-4 py-3 text-left font-semibold text-gray-900">邮箱</th>
-                                    <th class="px-4 py-3 text-left font-semibold text-gray-900">注册时间</th>
-                                    <th class="px-4 py-3 text-left font-semibold text-gray-900">状态</th>
-                                </tr>
-                            </thead>
-                            <tbody class="divide-y divide-gray-200">
-                                ${AppState.members.map((member, index) => `
-                                    <tr>
-                                        <td class="px-4 py-3 text-gray-600">${member.id}</td>
-                                        <td class="px-4 py-3 font-medium text-gray-900">${member.username}</td>
-                                        <td class="px-4 py-3 text-gray-600">${member.email}</td>
-                                        <td class="px-4 py-3 text-gray-600">${member.joinDate}</td>
-                                        <td class="px-4 py-3">
-                                            <span class="inline-block bg-green-100 text-green-800 px-3 py-1 rounded-full text-xs font-medium">
-                                                ✓ 活跃
-                                            </span>
-                                        </td>
-                                    </tr>
-                                `).join('')}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-
-                <div class="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div class="bg-white rounded-lg shadow p-4 text-center">
-                        <div class="text-2xl font-bold text-blue-600 mb-1">${AppState.members.length}</div>
-                        <div class="text-gray-600">总会员数</div>
-                    </div>
-                    <div class="bg-white rounded-lg shadow p-4 text-center">
-                        <div class="text-2xl font-bold text-green-600 mb-1">${AppState.members.length}</div>
-                        <div class="text-gray-600">活跃会员</div>
-                    </div>
-                    <div class="bg-white rounded-lg shadow p-4 text-center">
-                        <div class="text-2xl font-bold text-purple-600 mb-1">${AppState.works.length}</div>
-                        <div class="text-gray-600">发布作品数</div>
-                    </div>
-                </div>
-            </div>
-        `;
-
-        // 渲染函数
-        function render() {
-            const app = document.getElementById('app');
-            app.innerHTML = AppState.isLoggedIn ? MainPage() : LoginPage();
-            // 在手机上，自动聚焦输入框（改善体验，但不会在所有设备上触发）
-            try {
-                const el = document.querySelector('input[type=password]');
-                if (el && window.innerWidth <= 640) el.focus({ preventScroll: true });
-            } catch (err) { /* ignore */ }
-        }
-
-        // 初始化
-        window.addEventListener('DOMContentLoaded', render);
-    </script>
-</body>
-</html>
+  function escapeHtml(s){if(!s) return '';return String(s).replace(/[&<>\

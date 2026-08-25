@@ -28,6 +28,9 @@
     @media (max-width:720px){.mobile-stack{grid-template-columns:1fr}header{flex-direction:column;align-items:flex-start}}
     .small{font-size:13px;color:var(--muted)}.badge{background:#eef2ff;color:#1e3a8a;padding:6px 8px;border-radius:999px;font-weight:600}
     .row{display:flex;gap:12px;align-items:center}.spacer{flex:1}.link{color:var(--primary);text-decoration:underline;cursor:pointer}.actions{display:flex;gap:8px;align-items:center}.topbar{display:flex;gap:8px;align-items:center}footer{margin-top:18px;color:var(--muted);font-size:13px;text-align:center}.note{background:#fff8f0;border:1px solid #fde8d6;padding:10px;border-radius:8px}
+    .msg{padding:8px;border-radius:8px;margin-top:8px}
+    .msg.error{background:#fff1f0;color:#7f1d1d}
+    .msg.ok{background:#f0fdf4;color:#166534}
   </style>
 </head>
 <body>
@@ -37,14 +40,18 @@
   </div>
 
   <script>
-  // Frontend admin app with improved security checks
+  // Frontend admin app with improved checks
   const KEY_ADMIN_HASH = 'admin:hash';
+  const KEY_ADMIN_SET_AT = 'admin:setAt'; // ISO date when admin password was set
   const KEY_LOGGED = 'admin:logged';
+  const KEY_LOGGED_AT = 'admin:loggedAt'; // ISO timestamp when logged in
   const KEY_WORKS = 'admin:works';
   const KEY_MEMBERS = 'admin:members';
+  const LOGIN_TTL_DAYS = 7; // login expiry in days
 
   function q(sel){return document.querySelector(sel)}
   function nowISO(){return new Date().toISOString().slice(0,10)}
+  function nowTs(){return Date.now()}
 
   async function sha256Hex(str){const enc=new TextEncoder().encode(str);const hash=await crypto.subtle.digest('SHA-256',enc);const bytes=Array.from(new Uint8Array(hash));return bytes.map(b=>b.toString(16).padStart(2,'0')).join('')}
   function saveJSON(k,v){localStorage.setItem(k,JSON.stringify(v))}
@@ -54,18 +61,229 @@
   if(!localStorage.getItem(KEY_MEMBERS)){saveJSON(KEY_MEMBERS,[{id:1,username:'alice',email:'alice@example.com',joined:'2026-06-01'},{id:2,username:'bob',email:'bob@example.com',joined:'2026-06-05'}])}}
 
   async function isPasswordSet(){return !!localStorage.getItem(KEY_ADMIN_HASH)}
-  async function checkLogin(){return localStorage.getItem(KEY_LOGGED) === '1'}
+  function loginExpired(){
+    const ts = localStorage.getItem(KEY_LOGGED_AT);
+    if(!ts) return true;
+    const diff = Date.now() - Number(ts);
+    return diff > LOGIN_TTL_DAYS * 24 * 3600 * 1000;
+  }
+  async function checkLogin(){ return localStorage.getItem(KEY_LOGGED) === '1' && !loginExpired() }
 
-  async function loginWithPassword(pwd){const stored=localStorage.getItem(KEY_ADMIN_HASH);if(!stored) return false;const h=await sha256Hex(pwd);if(h===stored){localStorage.setItem(KEY_LOGGED,'1');return true}return false}
-  async function setAdminPassword(pwd){const h=await sha256Hex(pwd);localStorage.setItem(KEY_ADMIN_HASH,h);localStorage.setItem(KEY_LOGGED,'1')}
-  function logout(){localStorage.removeItem(KEY_LOGGED);render()}
+  async function loginWithPassword(pwd){const stored=localStorage.getItem(KEY_ADMIN_HASH);if(!stored) return false;const h=await sha256Hex(pwd);if(h===stored){localStorage.setItem(KEY_LOGGED,'1');localStorage.setItem(KEY_LOGGED_AT,String(Date.now()));return true}return false}
+  async function setAdminPassword(pwd){const h=await sha256Hex(pwd);localStorage.setItem(KEY_ADMIN_HASH,h);localStorage.setItem(KEY_ADMIN_SET_AT,new Date().toISOString());localStorage.setItem(KEY_LOGGED,'1');localStorage.setItem(KEY_LOGGED_AT,String(Date.now()));}
+  function logout(){localStorage.removeItem(KEY_LOGGED);localStorage.removeItem(KEY_LOGGED_AT);render()}
 
   function getWorks(){return loadJSON(KEY_WORKS,[])}
   function saveWorks(ws){saveJSON(KEY_WORKS,ws)}
   function getMembers(){return loadJSON(KEY_MEMBERS,[])}
   function saveMembers(ms){saveJSON(KEY_MEMBERS,ms)}
 
-  // client state for form inputs
-  const State = { newTitle:'', newAuthor:'', newCover:'' }
+  // small helpers
+  function escapeHtml(s){if(!s) return '';return String(s).replace(/[&<>"]|'/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+  function isWeakPassword(pw){const weak=['123456','password','admin','admin123','520520','111111'];return weak.includes(pw.toLowerCase())}
+  function validCoverUrl(url){if(!url) return true;return /^https?:\/\//i.test(url)}
 
-  function escapeHtml(s){if(!s) return '';return String(s).replace(/[&<>\
+  // UI state for forms
+  const UI = { newTitle:'', newAuthor:'', newCover:'', loginPwd:'', setupPwd:'', setupConfirm:'' }
+
+  // render functions
+  function renderLogin(setupMode=false){
+    document.getElementById('app').innerHTML = `
+      <div class="card">
+        <header style="align-items:flex-start">
+          <div>
+            <h1>🔐 管理后台（前端版）</h1>
+            <div class="muted">仅前端示例 · 管理员登录</div>
+          </div>
+          <div class="spacer"></div>
+          <div class="small">手机友好 · 数据保存在 localStorage</div>
+        </header>
+
+        <div class="col">
+          <div class="small">${setupMode? '首次使用：请设置管理员密码（最小长度 6，输入确认）' : '请输入管理员密码登录'}</div>
+          ${setupMode? `
+            <input id="setupPwd" type="password" placeholder="设置管理员密码（至少 6 位）" />
+            <input id="setupConfirm" type="password" placeholder="确认密码" style="margin-top:8px" />
+            <div class="row" style="margin-top:8px">
+              <button id="doSetup" class="btn-primary">设置并登录</button>
+              <button id="cancelSetup" class="btn-ghost">取消</button>
+              <div class="spacer"></div>
+            </div>
+          ` : `
+            <input id="loginPwd" type="password" placeholder="管理员密码" />
+            <div class="row" style="margin-top:8px">
+              <button id="doLogin" class="btn-primary">登录</button>
+              <button id="exportBtn" class="btn-ghost">导出数据</button>
+              <div class="spacer"></div>
+            </div>
+          `}
+
+          <div id="loginMsg" class="small" style="color:var(--danger);margin-top:8px;display:none"></div>
+        </div>
+      </div>
+    `;
+
+    if(setupMode){
+      q('#doSetup').addEventListener('click', async ()=>{
+        const pwd = q('#setupPwd').value.trim();
+        const confirm = q('#setupConfirm').value.trim();
+        if(pwd.length < 6){ showLoginMsg('密码至少 6 位'); return; }
+        if(pwd !== confirm){ showLoginMsg('两次密码不一致'); return; }
+        if(isWeakPassword(pwd)){ if(!confirm('检测到弱密码，确定要继续使用吗？')) return; }
+        await setAdminPassword(pwd);
+        renderMain();
+      });
+      q('#cancelSetup').addEventListener('click', ()=>{ render(); });
+    } else {
+      q('#doLogin').addEventListener('click', async ()=>{
+        const pwd = q('#loginPwd').value.trim();
+        if(!pwd){ showLoginMsg('请输入密码'); return; }
+        const ok = await loginWithPassword(pwd);
+        if(ok) renderMain(); else showLoginMsg('密码错误');
+      });
+      q('#exportBtn').addEventListener('click', exportAll);
+    }
+
+    function showLoginMsg(m){ const el=q('#loginMsg'); el.style.display='block'; el.textContent=m; setTimeout(()=>el.style.display='none',3500); }
+  }
+
+  function renderMain(){
+    const works=getWorks(); const members=getMembers();
+    document.getElementById('app').innerHTML = `
+      <div class="card">
+        <header>
+          <div>
+            <h1>📊 管理后台（前端）</h1>
+            <div class="muted">作品管理 · 会员查看 · 数据保存在 localStorage</div>
+          </div>
+          <div class="topbar">
+            <button id="exportTop" class="btn-ghost">导出</button>
+            <button id="importTop" class="btn-ghost">导入</button>
+            <div style="width:8px"></div>
+            <button id="logout" class="btn-danger">退出</button>
+          </div>
+        </header>
+
+        <div style="display:grid;grid-template-columns:1fr 360px;gap:12px;margin-top:12px">
+          <div>
+            <div class="card" style="margin-bottom:12px">
+              <h3 style="margin:0 0 8px 0">✨ 上传新作品</h3>
+              <div class="mobile-stack">
+                <div>
+                  <label class="small">作品标题</label>
+                  <input id="newTitle" type="text" placeholder="输入作品标题" />
+                </div>
+                <div>
+                  <label class="small">作者</label>
+                  <input id="newAuthor" type="text" placeholder="输入作者名称" />
+                </div>
+                <div>
+                  <label class="small">封面 URL（可选）</label>
+                  <input id="newCover" type="text" placeholder="https:// ..." />
+                </div>
+              </div>
+              <div style="margin-top:10px" class="row">
+                <button id="addWork" class="btn-primary">上传作品</button>
+                <div class="small">发布数: <strong>${works.length}</strong></div>
+              </div>
+              <div id="workMsg" class="small" style="margin-top:8px;display:none"></div>
+            </div>
+
+            <div class="card">
+              <h3 style="margin:0 0 8px 0">作品列表（${works.length}）</h3>
+              <div style="overflow:auto;max-height:320px;margin-top:8px">
+                <table id="worksTable">
+                  <thead><tr><th>ID</th><th>标题</th><th>作者</th><th>封面</th><th>操作</th></tr></thead>
+                  <tbody>
+                    ${works.map(w=>`
+                      <tr data-id="${w.id}">
+                        <td>${w.id}</td>
+                        <td>${escapeHtml(w.title)}</td>
+                        <td>${escapeHtml(w.author)}</td>
+                        <td>${w.cover?`<a href="${escapeHtml(w.cover)}" target="_blank">查看</a>`:''}</td>
+                        <td><div class="actions"><button class="btn-ghost" data-action="view" data-id="${w.id}">查看</button><button class="btn-danger" data-action="del" data-id="${w.id}">删除</button></div></td>
+                      </tr>
+                    `).join('')}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <div class="card" style="margin-bottom:12px">
+              <h3 style="margin:0 0 8px 0">👥 会员管理（${members.length}）</h3>
+              <div style="overflow:auto;max-height:380px;margin-top:8px">
+              <table id="membersTable">
+                <thead><tr><th>ID</th><th>用户名</th><th>邮箱</th><th>注册</th><th>操作</th></tr></thead>
+                <tbody>
+                ${members.map(m=>`
+                  <tr data-id="${m.id}">
+                    <td>${m.id}</td>
+                    <td>${escapeHtml(m.username)}</td>
+                    <td>${escapeHtml(m.email)}</td>
+                    <td>${escapeHtml(m.joined||'')}</td>
+                    <td><button class="btn-danger" data-action="delmember" data-id="${m.id}">删除</button></td>
+                  </tr>
+                `).join('')}
+                </tbody>
+              </table>
+              </div>
+            </div>
+
+            <div class="card note">
+              <div class="small"><strong>说明：</strong></div>
+              <ul class="small">
+                <li>数据保存在浏览器 localStorage；更换浏览器/清除存储会丢失数据。</li>
+                <li>管理员密码存储为 SHA-256 哈希（本地），提高基本安全性。</li>
+                <li>仅前端演示，如需生产部署请实现后端鉴权与数据库。</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    `;
+
+    q('#logout').addEventListener('click', ()=>{ logout(); });
+    q('#addWork').addEventListener('click', ()=>{ addWorkHandler(); });
+    q('#exportTop').addEventListener('click', exportAll);
+    q('#importTop').addEventListener('click', importDialog);
+
+    q('#worksTable tbody').addEventListener('click',(ev)=>{const btn=ev.target.closest('button');if(!btn) return;const id=Number(btn.getAttribute('data-id'));const action=btn.getAttribute('data-action');if(action==='del'){deleteWork(id)}if(action==='view'){viewWork(id)}});
+    q('#membersTable tbody').addEventListener('click',(ev)=>{const btn=ev.target.closest('button');if(!btn) return;const id=Number(btn.getAttribute('data-id'));if(btn.getAttribute('data-action')==='delmember'){if(confirm('确定删除该会员？')){deleteMember(id)}}});
+  }
+
+  // handlers and validation
+  function showWorkMsg(m,ok=true){const el=q('#workMsg');if(!el) return;el.style.display='block';el.textContent=m;el.className='small msg '+(ok?'ok':'error');setTimeout(()=>{el.style.display='none'},3500)}
+
+  function addWorkHandler(){
+    const title=q('#newTitle').value.trim();
+    const author=q('#newAuthor').value.trim();
+    const cover=q('#newCover').value.trim();
+    if(!title || !author){ showWorkMsg('请填写作品标题和作者', false); return; }
+    if(title.length>200){ showWorkMsg('标题过长（最多200字符）', false); return; }
+    if(author.length>100){ showWorkMsg('作者名称过长（最多100字符）', false); return; }
+    if(cover && !/^https?:\/\//i.test(cover)){ showWorkMsg('封面 URL 必须以 http:// 或 https:// 开头', false); return; }
+    const ws=getWorks(); const neww={id:Date.now(),title,author,cover:cover||'',created:nowISO()}; ws.unshift(neww); saveWorks(ws); q('#newTitle').value='';q('#newAuthor').value='';q('#newCover').value=''; showWorkMsg('作品上传成功'); renderMain(); }
+
+  function deleteWork(id){ if(!confirm('确定删除这条作品？')) return; const ws=getWorks().filter(w=>w.id!==id); saveWorks(ws); renderMain(); }
+  function viewWork(id){ const w=getWorks().find(x=>x.id===id); if(!w) return alert('找不到该作品'); alert(`作品：${w.title}\n作者：${w.author}\n封面：${w.cover||'无'}\n发布日期：${w.created||''}`); }
+  function deleteMember(id){ const ms=getMembers().filter(m=>m.id!==id); saveMembers(ms); renderMain(); }
+
+  // import/export
+  function exportAll(){ const payload={exportedAt:new Date().toISOString(),works:getWorks(),members:getMembers()}; const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='admin-data.json'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url); }
+  function importDialog(){ const input=document.createElement('input'); input.type='file'; input.accept='application/json'; input.addEventListener('change', async ()=>{ const f=input.files[0]; if(!f) return; try{ const txt=await f.text(); const data=JSON.parse(txt); if(data.works) saveWorks(data.works); if(data.members) saveMembers(data.members); alert('导入成功'); renderMain(); }catch(e){ alert('导入失败：'+e.message) } }); input.click(); }
+
+  // boot
+  (async function boot(){ seedIfEmpty(); const pwdSet=await isPasswordSet(); const logged=await checkLogin(); if(!pwdSet){ renderLogin(true); return; } if(!logged){ renderLogin(false); return; } renderMain(); })();
+
+  // expose small helpers for debugging/testing
+  window.__admin = {
+    getWorks, getMembers, exportAll, importDialog, logout,
+    setFrontendPassword: async (pw)=>{ await setAdminPassword(pw); console.log('set'); },
+    forceExpire: ()=>{ localStorage.setItem(KEY_LOGGED_AT, String(Date.now()- (LOGIN_TTL_DAYS+1)*24*3600*1000)); console.log('login forced expired'); }
+  };
+  </script>
+</body>
+</html>

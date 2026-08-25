@@ -6,10 +6,12 @@
   <title>Hosts — Create Host</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
-    /* 平滑过渡效果，类名已用 Tailwind，下面为补充样式 */
+    /* 移动优化：避免全局 transition，增强触摸目标 */
     body { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+    .touchable { padding: .6rem .75rem; border-radius: .6rem; }
     .search-shadow { box-shadow: 0 1px 0 rgba(0,0,0,0.03) inset; }
     .bottom-safe { padding-bottom: env(safe-area-inset-bottom, 12px); }
+    @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
   </style>
 </head>
 <body class="bg-gray-50 min-h-screen text-gray-800">
@@ -17,13 +19,12 @@
     <!-- Top bar -->
     <header class="pt-4 pb-2 px-4 flex items-center justify-between">
       <div class="flex items-center gap-3">
-        <button aria-label="Back" id="btnBack" class="text-gray-700 hover:bg-gray-100 rounded-full p-2">
-          <!-- chevron left -->
+        <button aria-label="Back" id="btnBack" class="text-gray-700 hover:bg-gray-100 rounded-full p-2 touchable">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
         </button>
         <h1 class="text-lg font-medium">Hosts</h1>
       </div>
-      <button id="btnAdd" aria-label="Add host" class="text-gray-700 hover:bg-gray-100 rounded-full p-2">
+      <button id="btnAdd" aria-label="Add host" class="text-gray-700 hover:bg-gray-100 rounded-full p-2 touchable">
         <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
       </button>
     </header>
@@ -33,7 +34,7 @@
       <label class="sr-only" for="search">Search hosts</label>
       <div class="mt-2">
         <div class="flex items-center bg-white rounded-lg px-3 py-2 search-shadow border border-gray-200">
-          <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35M11 19a8 8 0 100-16 8 8 0 000 16z"/></svg>
+          <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35M11 19a8 8"/></svg>
           <input id="search" type="search" placeholder="Search" class="flex-1 ml-3 outline-none text-sm text-gray-700" />
         </div>
       </div>
@@ -42,7 +43,6 @@
     <!-- Main content -->
     <main class="flex-1 flex flex-col items-center justify-start px-6 pt-12 pb-6">
       <div class="w-36 h-36 rounded-xl bg-white shadow flex items-center justify-center mb-6">
-        <!-- server icon -->
         <svg class="w-10 h-10 text-gray-700" viewBox="0 0 24 24" fill="none" stroke="currentColor">
           <rect x="3" y="4" width="18" height="6" rx="2" ry="2"></rect>
           <rect x="3" y="14" width="18" height="6" rx="2" ry="2"></rect>
@@ -51,9 +51,7 @@
       </div>
 
       <h2 class="text-2xl font-semibold mb-2">Create Host</h2>
-      <p class="text-center text-sm text-gray-500 mb-6 px-6">
-        Save your connection details as hosts to connect in one click.
-      </p>
+      <p class="text-center text-sm text-gray-500 mb-6 px-6">Save your connection details as hosts to connect in one click.</p>
 
       <form id="hostForm" class="w-full max-w-md">
         <label class="sr-only" for="hostInput">IP or hostname</label>
@@ -61,14 +59,14 @@
                class="w-full mb-4 px-4 py-3 rounded-lg border border-gray-200 bg-white focus:outline-none focus:ring-2 focus:ring-blue-400" />
 
         <button id="btnContinue" type="submit" disabled
-                class="w-full bg-blue-500 disabled:opacity-60 text-white py-3 rounded-full text-sm font-medium hover:bg-blue-600 transition-colors">
+                class="w-full bg-blue-500 disabled:opacity-60 text-white py-3 rounded-full text-sm font-medium hover:bg-blue-600 transition-colors touchable">
           Continue
         </button>
       </form>
 
-      <button id="btnDiscover" class="mt-4 text-blue-600 text-sm hover:underline">Discover local devices</button>
+      <button id="btnDiscover" class="mt-4 text-blue-600 text-sm hover:underline touchable">Discover local devices</button>
 
-      <!-- Discovered hosts list (hidden until discovery) -->
+      <!-- Discovered hosts list -->
       <div id="discovered" class="mt-6 w-full max-w-md hidden">
         <div class="bg-white rounded-lg shadow divide-y divide-gray-100 overflow-hidden">
           <div class="px-4 py-3 text-sm text-gray-600">Discovered devices</div>
@@ -80,17 +78,17 @@
     <!-- Bottom nav -->
     <nav class="border-t border-gray-200 bg-white px-4 py-3 bottom-safe">
       <div class="max-w-lg mx-auto flex justify-between items-center">
-        <button class="flex flex-col items-center text-xs text-gray-700">
+        <button class="flex flex-col items-center text-xs text-gray-700 touchable">
           <svg class="w-6 h-6 mb-1" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 6h16v12H4z"/></svg>
           <span>Vaults</span>
         </button>
 
-        <button class="flex flex-col items-center text-xs text-blue-600">
+        <button class="flex flex-col items-center text-xs text-blue-600 touchable">
           <svg class="w-6 h-6 mb-1" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M8 9h8M8 13h8"/></svg>
           <span>Connections</span>
         </button>
 
-        <button class="flex flex-col items-center text-xs text-gray-700">
+        <button class="flex flex-col items-center text-xs text-gray-700 touchable">
           <svg class="w-6 h-6 mb-1 rounded-full bg-purple-100 p-1" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/></svg>
           <span>Profile</span>
         </button>
@@ -99,7 +97,7 @@
   </div>
 
   <script>
-    // 简单前端逻辑：启用按钮、保存到 localStorage、模拟发现设备
+    // 保持原有逻辑，主要微调以提高移动端响应
     const hostInput = document.getElementById('hostInput');
     const btnContinue = document.getElementById('btnContinue');
     const hostForm = document.getElementById('hostForm');
@@ -107,12 +105,10 @@
     const discovered = document.getElementById('discovered');
     const discoveredList = document.getElementById('discoveredList');
 
-    // 启用/禁用 continue 按钮
     hostInput.addEventListener('input', () => {
       btnContinue.disabled = hostInput.value.trim().length === 0;
     });
 
-    // 提交保存 host（本地存储，仅示例）
     hostForm.addEventListener('submit', (e) => {
       e.preventDefault();
       const value = hostInput.value.trim();
@@ -122,21 +118,24 @@
       localStorage.setItem('hosts', JSON.stringify(hosts));
       hostInput.value = '';
       btnContinue.disabled = true;
-      alert('✅ Host saved: ' + value);
+      // 改用非阻塞提示
+      const toast = document.createElement('div');
+      toast.textContent = '✅ Host saved: ' + value;
+      toast.className = 'fixed left-1/2 -translate-x-1/2 bottom-24 bg-black/80 text-white px-4 py-2 rounded';
+      document.body.appendChild(toast);
+      setTimeout(() => toast.remove(), 1800);
     });
 
-    // 模拟局域网发现（演示用）
     btnDiscover.addEventListener('click', async () => {
       discoveredList.innerHTML = '';
       discovered.classList.remove('hidden');
-      // 模拟异步发现过程
       const sims = [
         { host: '192.168.1.10', name: 'raspberrypi' },
         { host: '192.168.1.22', name: 'nas.local' },
         { host: '192.168.1.45', name: 'dev-machine' }
       ];
       discoveredList.innerHTML = '<div class="py-3 text-sm text-gray-500">Scanning...</div>';
-      await new Promise(r => setTimeout(r, 900));
+      await new Promise(r => setTimeout(r, 800));
       discoveredList.innerHTML = sims.map(s => `
         <div class="flex items-center justify-between py-2">
           <div class="text-sm">
@@ -144,23 +143,25 @@
             <div class="text-xs text-gray-500">${s.host}</div>
           </div>
           <div>
-            <button class="px-3 py-1 text-sm rounded-full bg-blue-50 text-blue-600" data-host="${s.host}">Add</button>
+            <button class="px-3 py-1 text-sm rounded-full bg-blue-50 text-blue-600 touchable" data-host="${s.host}">Add</button>
           </div>
         </div>
       `).join('');
-      // 添加事件代理：Add 按钮
       discoveredList.querySelectorAll('button[data-host]').forEach(b => {
         b.addEventListener('click', () => {
           const h = b.getAttribute('data-host');
           const hosts = JSON.parse(localStorage.getItem('hosts') || '[]');
           hosts.unshift({ id: Date.now(), host: h });
           localStorage.setItem('hosts', JSON.stringify(hosts));
-          alert('✅ Host added: ' + h);
+          const toast = document.createElement('div');
+          toast.textContent = '✅ Host added: ' + h;
+          toast.className = 'fixed left-1/2 -translate-x-1/2 bottom-24 bg-black/80 text-white px-4 py-2 rounded';
+          document.body.appendChild(toast);
+          setTimeout(() => toast.remove(), 1600);
         });
       });
     });
 
-    // Back / Add 按钮示例行为（仅演示）
     document.getElementById('btnBack').addEventListener('click', () => history.back());
     document.getElementById('btnAdd').addEventListener('click', () => hostInput.focus());
   </script>

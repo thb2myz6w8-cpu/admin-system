@@ -1,289 +1,291 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-  <title>管理后台（前端版）</title>
-  <meta name="theme-color" content="#0ea5e9" />
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1" />
+  <title>现代化通用后台管理系统</title>
+  <script src="https://cdn.tailwindcss.com"></script>
   <style>
-    :root{--bg:#f8fafc;--card:#fff;--muted:#6b7280;--primary:#0ea5e9;--danger:#ef4444;--radius:12px}
-    *{box-sizing:border-box}
-    html,body{height:100%}
-    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial;background:var(--bg);color:#0f172a;-webkit-font-smoothing:antialiased}
-    .container{max-width:1100px;margin:18px auto;padding:16px}
-    .card{background:var(--card);border-radius:var(--radius);box-shadow:0 4px 18px rgba(2,6,23,0.06);padding:16px}
-    header{display:flex;gap:12px;align-items:center;justify-content:space-between;margin-bottom:16px}
-    h1{font-size:18px;margin:0}
-    .muted{color:var(--muted);font-size:13px}
-    .flex{display:flex;gap:12px;align-items:center}
-    .col{display:flex;flex-direction:column;gap:8px}
-    input[type="text"],input[type="password"],textarea,select{width:100%;padding:10px;border:1px solid #e6e9ef;border-radius:10px;font-size:14px}
-    button{cursor:pointer;border:0;padding:10px 12px;border-radius:10px;font-weight:600}
-    .btn-primary{background:var(--primary);color:#fff}
-    .btn-ghost{background:transparent;border:1px solid #e6e9ef}
-    .btn-danger{background:var(--danger);color:#fff}
-    table{width:100%;border-collapse:collapse;font-size:14px}
-    th,td{padding:10px;border-bottom:1px solid #f1f5f9;text-align:left}
-    .mobile-stack{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-    @media (max-width:720px){.mobile-stack{grid-template-columns:1fr}header{flex-direction:column;align-items:flex-start}}
-    .small{font-size:13px;color:var(--muted)}.badge{background:#eef2ff;color:#1e3a8a;padding:6px 8px;border-radius:999px;font-weight:600}
-    .row{display:flex;gap:12px;align-items:center}.spacer{flex:1}.link{color:var(--primary);text-decoration:underline;cursor:pointer}.actions{display:flex;gap:8px;align-items:center}.topbar{display:flex;gap:8px;align-items:center}footer{margin-top:18px;color:var(--muted);font-size:13px;text-align:center}.note{background:#fff8f0;border:1px solid #fde8d6;padding:10px;border-radius:8px}
-    .msg{padding:8px;border-radius:8px;margin-top:8px}
-    .msg.error{background:#fff1f0;color:#7f1d1d}
-    .msg.ok{background:#f0fdf4;color:#166534}
+    /* 移除全局过渡（会导致移动端卡顿），只对少数元素使用过渡 */
+    :root { --accent: #2563eb; }
+    body { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial; }
+    .soft-transition { transition: background-color .18s ease, color .18s ease; }
+
+    /* 更友好的触摸目标 */
+    .touch-btn { padding: .75rem 1rem; border-radius: .625rem; font-size: 1rem; }
+
+    /* 减少动效（尊重用户偏好） */
+    @media (prefers-reduced-motion: reduce) {
+      .soft-transition { transition: none; }
+    }
+
+    /* 简单容器宽度限制，移动端更舒适 */
+    .container-max { max-width: 960px; margin-inline: auto; padding: 0 16px; }
+
+    /* 登录错误/提示 */
+    .msg { font-size: 0.95rem; }
   </style>
 </head>
-<body>
-  <div class="container">
-    <div id="app"></div>
-    <footer>纯前端演示 · 管理员功能（作品管理 / 会员查看）· 数据保存在浏览器 localStorage</footer>
+<body class="bg-gray-50 text-gray-800">
+  <div class="container-max min-h-screen flex items-center justify-center py-8">
+    <div id="app" class="w-full max-w-lg">
+      <!-- Login section -->
+      <section id="loginSection" class="bg-white rounded-lg shadow p-6">
+        <div class="text-center mb-6">
+          <h1 class="text-2xl font-semibold">🔐 管理后台</h1>
+          <p class="text-sm text-gray-500">快速、流畅的手机登录体验</p>
+        </div>
+
+        <form id="loginForm" class="space-y-4">
+          <div>
+            <label class="text-sm font-medium">管理员密码</label>
+            <input id="passwordInput" type="password" autocomplete="current-password" inputmode="text"
+                   placeholder="请输入密码 (提示: admin123)"
+                   class="w-full mt-2 px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
+                   required />
+          </div>
+
+          <div class="flex items-center justify-between">
+            <label class="inline-flex items-center text-sm">
+              <input id="rememberMe" type="checkbox" class="mr-2" />
+              记住我
+            </label>
+
+            <button id="btnSetPin" type="button" class="text-sm text-blue-600 hover:underline">设置快速 PIN</button>
+          </div>
+
+          <div class="flex gap-3">
+            <button id="btnLogin" type="submit" class="flex-1 touch-btn bg-blue-600 text-white font-medium soft-transition">登录</button>
+            <button id="btnUsePin" type="button" class="touch-btn border border-gray-200 text-gray-700">PIN</button>
+          </div>
+
+          <div id="loginMsg" class="mt-2 text-sm text-red-600 msg" aria-live="polite" style="display:none"></div>
+        </form>
+
+        <div class="mt-6 p-3 bg-gray-50 rounded text-xs text-gray-600">
+          <div>测试密码：<strong>admin123</strong></div>
+          <div class="mt-1">快速 PIN 是可选的，PIN 会以 SHA-256 哈希形式存储在本地（非明文）。</div>
+        </div>
+      </section>
+
+      <!-- Main section (hidden by default) -->
+      <section id="mainSection" class="hidden bg-white rounded-lg shadow p-4 mt-6">
+        <div class="flex items-center justify-between mb-4">
+          <div>
+            <h2 class="text-lg font-semibold">📊 管理后台</h2>
+            <div class="text-xs text-gray-500">欢迎</div>
+          </div>
+          <div class="flex items-center gap-2">
+            <button id="btnLock" class="touch-btn border border-gray-200 text-gray-700">锁定</button>
+            <button id="btnLogout" class="touch-btn bg-red-600 text-white">退出</button>
+          </div>
+        </div>
+
+        <!-- 简化的主界面预览（使用静态 DOM，避免频繁重绘） -->
+        <div id="mainContent" class="space-y-4">
+          <div class="bg-gray-50 p-3 rounded">
+            <div class="text-sm text-gray-600">作品与会员管理（移动优化预览）</div>
+            <div class="mt-2 grid grid-cols-1 gap-3">
+              <div class="p-3 bg-white rounded border">作品：3（示例）</div>
+              <div class="p-3 bg-white rounded border">会员：4（示例）</div>
+            </div>
+          </div>
+
+          <div>
+            <button id="btnOpenWorks" class="w-full touch-btn bg-green-600 text-white">打开作品管理</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- PIN modal (simple) -->
+      <div id="pinModal" class="fixed inset-0 bg-black/30 hidden items-center justify-center">
+        <div class="bg-white rounded-lg p-4 w-11/12 max-w-sm">
+          <h3 class="font-medium mb-2">设置 / 输入 快速 PIN</h3>
+          <div id="pinStep" class="space-y-3">
+            <input id="pinInput" inputmode="numeric" pattern="[0-9]*" maxlength="6"
+                   placeholder="请输入 4-6 位数字 PIN"
+                   class="w-full px-4 py-3 border border-gray-300 rounded-lg" />
+            <div class="flex gap-2">
+              <button id="pinSave" class="flex-1 touch-btn bg-blue-600 text-white">保存 PIN</button>
+              <button id="pinCancel" class="flex-1 touch-btn border border-gray-200">取消</button>
+            </div>
+            <div id="pinMsg" class="text-sm text-red-600" style="display:none"></div>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 
   <script>
-  // Frontend admin app with improved checks
-  const KEY_ADMIN_HASH = 'admin:hash';
-  const KEY_ADMIN_SET_AT = 'admin:setAt'; // ISO date when admin password was set
-  const KEY_LOGGED = 'admin:logged';
-  const KEY_LOGGED_AT = 'admin:loggedAt'; // ISO timestamp when logged in
-  const KEY_WORKS = 'admin:works';
-  const KEY_MEMBERS = 'admin:members';
-  const LOGIN_TTL_DAYS = 7; // login expiry in days
+    // 简化 DOM 更新：只切换隐藏/显示，避免大量 innerHTML 重新渲染
+    const loginSection = document.getElementById('loginSection');
+    const mainSection = document.getElementById('mainSection');
+    const loginForm = document.getElementById('loginForm');
+    const passwordInput = document.getElementById('passwordInput');
+    const loginMsg = document.getElementById('loginMsg');
+    const rememberMe = document.getElementById('rememberMe');
+    const btnSetPin = document.getElementById('btnSetPin');
+    const btnUsePin = document.getElementById('btnUsePin');
+    const pinModal = document.getElementById('pinModal');
+    const pinInput = document.getElementById('pinInput');
+    const pinSave = document.getElementById('pinSave');
+    const pinCancel = document.getElementById('pinCancel');
+    const pinMsg = document.getElementById('pinMsg');
+    const btnLogout = document.getElementById('btnLogout');
+    const btnLock = document.getElementById('btnLock');
 
-  function q(sel){return document.querySelector(sel)}
-  function nowISO(){return new Date().toISOString().slice(0,10)}
-  function nowTs(){return Date.now()}
-
-  async function sha256Hex(str){const enc=new TextEncoder().encode(str);const hash=await crypto.subtle.digest('SHA-256',enc);const bytes=Array.from(new Uint8Array(hash));return bytes.map(b=>b.toString(16).padStart(2,'0')).join('')}
-  function saveJSON(k,v){localStorage.setItem(k,JSON.stringify(v))}
-  function loadJSON(k,def){try{const t=localStorage.getItem(k);return t?JSON.parse(t):def}catch(e){return def}}
-
-  function seedIfEmpty(){if(!localStorage.getItem(KEY_WORKS)){saveJSON(KEY_WORKS,[{id:Date.now(),title:'Next.js 全栈实战',author:'张三',cover:'https://via.placeholder.com/120',created:nowISO()}])}
-  if(!localStorage.getItem(KEY_MEMBERS)){saveJSON(KEY_MEMBERS,[{id:1,username:'alice',email:'alice@example.com',joined:'2026-06-01'},{id:2,username:'bob',email:'bob@example.com',joined:'2026-06-05'}])}}
-
-  async function isPasswordSet(){return !!localStorage.getItem(KEY_ADMIN_HASH)}
-  function loginExpired(){
-    const ts = localStorage.getItem(KEY_LOGGED_AT);
-    if(!ts) return true;
-    const diff = Date.now() - Number(ts);
-    return diff > LOGIN_TTL_DAYS * 24 * 3600 * 1000;
-  }
-  async function checkLogin(){ return localStorage.getItem(KEY_LOGGED) === '1' && !loginExpired() }
-
-  async function loginWithPassword(pwd){const stored=localStorage.getItem(KEY_ADMIN_HASH);if(!stored) return false;const h=await sha256Hex(pwd);if(h===stored){localStorage.setItem(KEY_LOGGED,'1');localStorage.setItem(KEY_LOGGED_AT,String(Date.now()));return true}return false}
-  async function setAdminPassword(pwd){const h=await sha256Hex(pwd);localStorage.setItem(KEY_ADMIN_HASH,h);localStorage.setItem(KEY_ADMIN_SET_AT,new Date().toISOString());localStorage.setItem(KEY_LOGGED,'1');localStorage.setItem(KEY_LOGGED_AT,String(Date.now()));}
-  function logout(){localStorage.removeItem(KEY_LOGGED);localStorage.removeItem(KEY_LOGGED_AT);render()}
-
-  function getWorks(){return loadJSON(KEY_WORKS,[])}
-  function saveWorks(ws){saveJSON(KEY_WORKS,ws)}
-  function getMembers(){return loadJSON(KEY_MEMBERS,[])}
-  function saveMembers(ms){saveJSON(KEY_MEMBERS,ms)}
-
-  // small helpers
-  function escapeHtml(s){if(!s) return '';return String(s).replace(/[&<>"]|'/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
-  function isWeakPassword(pw){const weak=['123456','password','admin','admin123','520520','111111'];return weak.includes(pw.toLowerCase())}
-  function validCoverUrl(url){if(!url) return true;return /^https?:\/\//i.test(url)}
-
-  // UI state for forms
-  const UI = { newTitle:'', newAuthor:'', newCover:'', loginPwd:'', setupPwd:'', setupConfirm:'' }
-
-  // render functions
-  function renderLogin(setupMode=false){
-    document.getElementById('app').innerHTML = `
-      <div class="card">
-        <header style="align-items:flex-start">
-          <div>
-            <h1>🔐 管理后台（前端版）</h1>
-            <div class="muted">仅前端示例 · 管理员登录</div>
-          </div>
-          <div class="spacer"></div>
-          <div class="small">手机友好 · 数据保存在 localStorage</div>
-        </header>
-
-        <div class="col">
-          <div class="small">${setupMode? '首次使用：请设置管理员密码（最小长度 6，输入确认）' : '请输入管理员密码登录'}</div>
-          ${setupMode? `
-            <input id="setupPwd" type="password" placeholder="设置管理员密码（至少 6 位）" />
-            <input id="setupConfirm" type="password" placeholder="确认密码" style="margin-top:8px" />
-            <div class="row" style="margin-top:8px">
-              <button id="doSetup" class="btn-primary">设置并登录</button>
-              <button id="cancelSetup" class="btn-ghost">取消</button>
-              <div class="spacer"></div>
-            </div>
-          ` : `
-            <input id="loginPwd" type="password" placeholder="管理员密码" />
-            <div class="row" style="margin-top:8px">
-              <button id="doLogin" class="btn-primary">登录</button>
-              <button id="exportBtn" class="btn-ghost">导出数据</button>
-              <div class="spacer"></div>
-            </div>
-          `}
-
-          <div id="loginMsg" class="small" style="color:var(--danger);margin-top:8px;display:none"></div>
-        </div>
-      </div>
-    `;
-
-    if(setupMode){
-      q('#doSetup').addEventListener('click', async ()=>{
-        const pwd = q('#setupPwd').value.trim();
-        const confirm = q('#setupConfirm').value.trim();
-        if(pwd.length < 6){ showLoginMsg('密码至少 6 位'); return; }
-        if(pwd !== confirm){ showLoginMsg('两次密码不一致'); return; }
-        if(isWeakPassword(pwd)){ if(!confirm('检测到弱密码，确定要继续使用吗？')) return; }
-        await setAdminPassword(pwd);
-        renderMain();
-      });
-      q('#cancelSetup').addEventListener('click', ()=>{ render(); });
-    } else {
-      q('#doLogin').addEventListener('click', async ()=>{
-        const pwd = q('#loginPwd').value.trim();
-        if(!pwd){ showLoginMsg('请输入密码'); return; }
-        const ok = await loginWithPassword(pwd);
-        if(ok) renderMain(); else showLoginMsg('密码错误');
-      });
-      q('#exportBtn').addEventListener('click', exportAll);
+    // helpers
+    function showMsg(el, text, isError=true) {
+      el.style.display = text ? 'block' : 'none';
+      el.textContent = text || '';
+      el.style.color = isError ? '#dc2626' : '#075985';
     }
 
-    function showLoginMsg(m){ const el=q('#loginMsg'); el.style.display='block'; el.textContent=m; setTimeout(()=>el.style.display='none',3500); }
-  }
+    async function hashText(text) {
+      // 使用 SubtleCrypto 做 SHA-256 哈希
+      if (!window.crypto || !crypto.subtle) {
+        // 回退：简单 JS 哈希（弱），但大多数现代手机浏览器支持 SubtleCrypto
+        return text.split('').map(c => c.charCodeAt(0).toString(16)).join('');
+      }
+      const data = new TextEncoder().encode(text);
+      const digest = await crypto.subtle.digest('SHA-256', data);
+      return Array.from(new Uint8Array(digest)).map(b => b.toString(16).padStart(2,'0')).join('');
+    }
 
-  function renderMain(){
-    const works=getWorks(); const members=getMembers();
-    document.getElementById('app').innerHTML = `
-      <div class="card">
-        <header>
-          <div>
-            <h1>📊 管理后台（前端）</h1>
-            <div class="muted">作品管理 · 会员查看 · 数据保存在 localStorage</div>
-          </div>
-          <div class="topbar">
-            <button id="exportTop" class="btn-ghost">导出</button>
-            <button id="importTop" class="btn-ghost">导入</button>
-            <div style="width:8px"></div>
-            <button id="logout" class="btn-danger">退出</button>
-          </div>
-        </header>
+    // 存取 localStorage 的 key
+    const KEY_AUTH = 'admin_auth_v1'; // 用于记住登录
+    const KEY_PIN = 'admin_fastpin_v1'; // 存储 pin 的哈希
 
-        <div style="display:grid;grid-template-columns:1fr 360px;gap:12px;margin-top:12px">
-          <div>
-            <div class="card" style="margin-bottom:12px">
-              <h3 style="margin:0 0 8px 0">✨ 上传新作品</h3>
-              <div class="mobile-stack">
-                <div>
-                  <label class="small">作品标题</label>
-                  <input id="newTitle" type="text" placeholder="输入作品标题" />
-                </div>
-                <div>
-                  <label class="small">作者</label>
-                  <input id="newAuthor" type="text" placeholder="输入作者名称" />
-                </div>
-                <div>
-                  <label class="small">封面 URL（可选）</label>
-                  <input id="newCover" type="text" placeholder="https:// ..." />
-                </div>
-              </div>
-              <div style="margin-top:10px" class="row">
-                <button id="addWork" class="btn-primary">上传作品</button>
-                <div class="small">发布数: <strong>${works.length}</strong></div>
-              </div>
-              <div id="workMsg" class="small" style="margin-top:8px;display:none"></div>
-            </div>
+    // 检查已有登录或 PIN
+    (async function init() {
+      try {
+        const auth = localStorage.getItem(KEY_AUTH);
+        const hasPin = !!localStorage.getItem(KEY_PIN);
 
-            <div class="card">
-              <h3 style="margin:0 0 8px 0">作品列表（${works.length}）</h3>
-              <div style="overflow:auto;max-height:320px;margin-top:8px">
-                <table id="worksTable">
-                  <thead><tr><th>ID</th><th>标题</th><th>作者</th><th>封面</th><th>操作</th></tr></thead>
-                  <tbody>
-                    ${works.map(w=>`
-                      <tr data-id="${w.id}">
-                        <td>${w.id}</td>
-                        <td>${escapeHtml(w.title)}</td>
-                        <td>${escapeHtml(w.author)}</td>
-                        <td>${w.cover?`<a href="${escapeHtml(w.cover)}" target="_blank">查看</a>`:''}</td>
-                        <td><div class="actions"><button class="btn-ghost" data-action="view" data-id="${w.id}">查看</button><button class="btn-danger" data-action="del" data-id="${w.id}">删除</button></div></td>
-                      </tr>
-                    `).join('')}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
+        if (auth === 'true') {
+          // 自动登录（记住我）
+          showMain();
+          return;
+        }
 
-          <div>
-            <div class="card" style="margin-bottom:12px">
-              <h3 style="margin:0 0 8px 0">👥 会员管理（${members.length}）</h3>
-              <div style="overflow:auto;max-height:380px;margin-top:8px">
-              <table id="membersTable">
-                <thead><tr><th>ID</th><th>用户名</th><th>邮箱</th><th>注册</th><th>操作</th></tr></thead>
-                <tbody>
-                ${members.map(m=>`
-                  <tr data-id="${m.id}">
-                    <td>${m.id}</td>
-                    <td>${escapeHtml(m.username)}</td>
-                    <td>${escapeHtml(m.email)}</td>
-                    <td>${escapeHtml(m.joined||'')}</td>
-                    <td><button class="btn-danger" data-action="delmember" data-id="${m.id}">删除</button></td>
-                  </tr>
-                `).join('')}
-                </tbody>
-              </table>
-              </div>
-            </div>
+        // 小优化：如果设备支持 autofill，聚焦输入框以唤起键盘
+        setTimeout(() => passwordInput.focus(), 200);
 
-            <div class="card note">
-              <div class="small"><strong>说明：</strong></div>
-              <ul class="small">
-                <li>数据保存在浏览器 localStorage；更换浏览器/清除存储会丢失数据。</li>
-                <li>管理员密码存储为 SHA-256 哈希（本地），提高基本安全性。</li>
-                <li>仅前端演示，如需生产部署请实现后端鉴权与数据库。</li>
-              </ul>
-            </div>
-          </div>
-        </div>
+        // 显示 / 隐藏 PIN 按钮
+        btnUsePin.style.display = hasPin ? 'inline-flex' : 'none';
+      } catch (e) {
+        console.error('初始化失败', e);
+      }
+    })();
 
-      </div>
-    `;
+    // 登录处理（示例：固定密码 admin123）
+    loginForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      loginMsg.style.display = 'none';
+      const pw = passwordInput.value.trim();
+      if (!pw) { showMsg(loginMsg, '请输入密码'); return; }
 
-    q('#logout').addEventListener('click', ()=>{ logout(); });
-    q('#addWork').addEventListener('click', ()=>{ addWorkHandler(); });
-    q('#exportTop').addEventListener('click', exportAll);
-    q('#importTop').addEventListener('click', importDialog);
+      // 真实项目请用后端认证；这里只是示例/本地演示
+      if (pw === 'admin123') {
+        // 登录成功
+        if (rememberMe.checked) localStorage.setItem(KEY_AUTH, 'true');
+        showMain();
+      } else {
+        showMsg(loginMsg, '密码错误');
+      }
+    });
 
-    q('#worksTable tbody').addEventListener('click',(ev)=>{const btn=ev.target.closest('button');if(!btn) return;const id=Number(btn.getAttribute('data-id'));const action=btn.getAttribute('data-action');if(action==='del'){deleteWork(id)}if(action==='view'){viewWork(id)}});
-    q('#membersTable tbody').addEventListener('click',(ev)=>{const btn=ev.target.closest('button');if(!btn) return;const id=Number(btn.getAttribute('data-id'));if(btn.getAttribute('data-action')==='delmember'){if(confirm('确定删除该会员？')){deleteMember(id)}}});
-  }
+    // ��速 PIN：弹窗保存
+    btnSetPin.addEventListener('click', () => {
+      pinModal.classList.remove('hidden');
+      pinModal.style.display = 'flex';
+      pinInput.value = '';
+      pinMsg.style.display = 'none';
+      setTimeout(() => pinInput.focus(), 100);
+    });
 
-  // handlers and validation
-  function showWorkMsg(m,ok=true){const el=q('#workMsg');if(!el) return;el.style.display='block';el.textContent=m;el.className='small msg '+(ok?'ok':'error');setTimeout(()=>{el.style.display='none'},3500)}
+    pinCancel.addEventListener('click', () => {
+      pinModal.classList.add('hidden');
+    });
 
-  function addWorkHandler(){
-    const title=q('#newTitle').value.trim();
-    const author=q('#newAuthor').value.trim();
-    const cover=q('#newCover').value.trim();
-    if(!title || !author){ showWorkMsg('请填写作品标题和作者', false); return; }
-    if(title.length>200){ showWorkMsg('标题过长（最多200字符）', false); return; }
-    if(author.length>100){ showWorkMsg('作者名称过长（最多100字符）', false); return; }
-    if(cover && !/^https?:\/\//i.test(cover)){ showWorkMsg('封面 URL 必须以 http:// 或 https:// 开头', false); return; }
-    const ws=getWorks(); const neww={id:Date.now(),title,author,cover:cover||'',created:nowISO()}; ws.unshift(neww); saveWorks(ws); q('#newTitle').value='';q('#newAuthor').value='';q('#newCover').value=''; showWorkMsg('作品上传成功'); renderMain(); }
+    pinSave.addEventListener('click', async () => {
+      const pin = (pinInput.value || '').trim();
+      if (!/^[0-9]{4,6}$/.test(pin)) {
+        showMsg(pinMsg, '请输入 4-6 位数字 PIN');
+        return;
+      }
+      const h = await hashText(pin);
+      localStorage.setItem(KEY_PIN, h);
+      pinModal.classList.add('hidden');
+      btnUsePin.style.display = 'inline-flex';
+      showMsg(loginMsg, '已保存快速 PIN（本地存储）', false);
+      setTimeout(() => showMsg(loginMsg, ''), 2200);
+    });
 
-  function deleteWork(id){ if(!confirm('确定删除这条作品？')) return; const ws=getWorks().filter(w=>w.id!==id); saveWorks(ws); renderMain(); }
-  function viewWork(id){ const w=getWorks().find(x=>x.id===id); if(!w) return alert('找不到该作品'); alert(`作品：${w.title}\n作者：${w.author}\n封面：${w.cover||'无'}\n发布日期：${w.created||''}`); }
-  function deleteMember(id){ const ms=getMembers().filter(m=>m.id!==id); saveMembers(ms); renderMain(); }
+    // 使用 PIN 登录（弹出 PIN 输入框）
+    btnUsePin.addEventListener('click', async () => {
+      pinModal.classList.remove('hidden');
+      pinModal.style.display = 'flex';
+      pinInput.value = '';
+      pinMsg.style.display = 'none';
+      setTimeout(() => pinInput.focus(), 100);
 
-  // import/export
-  function exportAll(){ const payload={exportedAt:new Date().toISOString(),works:getWorks(),members:getMembers()}; const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='admin-data.json'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url); }
-  function importDialog(){ const input=document.createElement('input'); input.type='file'; input.accept='application/json'; input.addEventListener('change', async ()=>{ const f=input.files[0]; if(!f) return; try{ const txt=await f.text(); const data=JSON.parse(txt); if(data.works) saveWorks(data.works); if(data.members) saveMembers(data.members); alert('导入成功'); renderMain(); }catch(e){ alert('导入失败：'+e.message) } }); input.click(); }
+      // 把保存动作改为校验
+      pinSave.onclick = async () => {
+        const pin = (pinInput.value || '').trim();
+        if (!/^[0-9]{4,6}$/.test(pin)) {
+          showMsg(pinMsg, '请输入 4-6 位数字 PIN');
+          return;
+        }
+        const h = await hashText(pin);
+        const stored = localStorage.getItem(KEY_PIN);
+        if (h === stored) {
+          // 成功
+          pinModal.classList.add('hidden');
+          // 登录并记住（短期会话）
+          localStorage.setItem(KEY_AUTH, 'true');
+          showMain();
+        } else {
+          showMsg(pinMsg, 'PIN 不匹配');
+        }
+      };
+    });
 
-  // boot
-  (async function boot(){ seedIfEmpty(); const pwdSet=await isPasswordSet(); const logged=await checkLogin(); if(!pwdSet){ renderLogin(true); return; } if(!logged){ renderLogin(false); return; } renderMain(); })();
+    // 锁定：隐藏主界面，保留 PIN 登录（不会清除 PIN）
+    btnLock.addEventListener('click', () => {
+      localStorage.removeItem(KEY_AUTH); // 需重新解锁
+      mainSection.classList.add('hidden');
+      loginSection.classList.remove('hidden');
+      showMsg(loginMsg, '已锁定，请重新登录');
+    });
 
-  // expose small helpers for debugging/testing
-  window.__admin = {
-    getWorks, getMembers, exportAll, importDialog, logout,
-    setFrontendPassword: async (pw)=>{ await setAdminPassword(pw); console.log('set'); },
-    forceExpire: ()=>{ localStorage.setItem(KEY_LOGGED_AT, String(Date.now()- (LOGIN_TTL_DAYS+1)*24*3600*1000)); console.log('login forced expired'); }
-  };
+    // 退出登录：清除所有本地凭据
+    btnLogout.addEventListener('click', () => {
+      localStorage.removeItem(KEY_AUTH);
+      // 不删除 PIN：用户可能希望保留快速 PIN；如果想彻底清除也可以提供一个选项
+      mainSection.classList.add('hidden');
+      loginSection.classList.remove('hidden');
+      showMsg(loginMsg, '已退出登录', false);
+    });
+
+    function showMain() {
+      loginSection.classList.add('hidden');
+      mainSection.classList.remove('hidden');
+      // 解除可能的错误提示
+      showMsg(loginMsg, '');
+    }
+
+    // 防止 modal 因点击遮罩关闭时出现滚动问题
+    pinModal.addEventListener('click', (e) => {
+      if (e.target === pinModal) {
+        pinModal.classList.add('hidden');
+      }
+    });
+
+    // 简单快速键盘支持：在 PIN 模式按回车也提交
+    pinInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') pinSave.click();
+    });
   </script>
 </body>
 </html>

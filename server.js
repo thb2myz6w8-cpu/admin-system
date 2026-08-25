@@ -108,7 +108,7 @@ server.listen(PORT, HOST, () => {
   console.log(`
 ╔════════════════════════════════════════════════════════════╗
 ║         🚀 Admin System Server 启动成功!                  ║
-╚════════════════════════════════════════════════════════���═══╝
+╚══════════════════════════════════════════════════════════╝
 
 📍 服务器地址: http://localhost:${PORT}
 📍 外网访问: http://<your-server-ip>:${PORT}
@@ -116,7 +116,7 @@ server.listen(PORT, HOST, () => {
 🎬 主页面:    http://localhost:${PORT}/index.html
 🔌 Hosts管理: http://localhost:${PORT}/hosts.html
 
-🔑 登录密码: admin123
+🔑 管理员账户: feiji / 888888
 
 📊 CI/CD工作流程:
   - Google Cloud: .github/workflows/google.yml

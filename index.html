@@ -38,9 +38,17 @@
 
         <form id="loginForm" class="space-y-4">
           <div>
+            <label class="text-sm font-medium">管理员账号</label>
+            <input id="usernameInput" type="text" autocomplete="username" inputmode="text"
+                   placeholder="请输入管理员账号 (示例: feiji)"
+                   class="w-full mt-2 px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
+                   required />
+          </div>
+
+          <div>
             <label class="text-sm font-medium">管理员密码</label>
             <input id="passwordInput" type="password" autocomplete="current-password" inputmode="text"
-                   placeholder="请输入密码 (提示: admin123)"
+                   placeholder="请输入密码 (示例: 888888)"
                    class="w-full mt-2 px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
                    required />
           </div>
@@ -63,7 +71,7 @@
         </form>
 
         <div class="mt-6 p-3 bg-gray-50 rounded text-xs text-gray-600">
-          <div>测试密码：<strong>admin123</strong></div>
+          <div>测试账号：<strong>feiji</strong> / 密码：<strong>888888</strong></div>
           <div class="mt-1">快速 PIN 是可选的，PIN 会以 SHA-256 哈希形式存储在本地（非明文）。</div>
         </div>
       </section>
@@ -121,6 +129,7 @@
     const loginSection = document.getElementById('loginSection');
     const mainSection = document.getElementById('mainSection');
     const loginForm = document.getElementById('loginForm');
+    const usernameInput = document.getElementById('usernameInput');
     const passwordInput = document.getElementById('passwordInput');
     const loginMsg = document.getElementById('loginMsg');
     const rememberMe = document.getElementById('rememberMe');
@@ -156,6 +165,10 @@
     const KEY_AUTH = 'admin_auth_v1'; // 用于记住登录
     const KEY_PIN = 'admin_fastpin_v1'; // 存储 pin 的哈希
 
+    // 静态示例管理员账号（前端演示用）
+    const ADMIN_USER = 'feiji';
+    const ADMIN_PW = '888888';
+
     // 检查已有登录或 PIN
     (async function init() {
       try {
@@ -169,7 +182,7 @@
         }
 
         // 小优化：如果设备支持 autofill，聚焦输入框以唤起键盘
-        setTimeout(() => passwordInput.focus(), 200);
+        setTimeout(() => usernameInput.focus(), 200);
 
         // 显示 / 隐藏 PIN 按钮
         btnUsePin.style.display = hasPin ? 'inline-flex' : 'none';
@@ -178,30 +191,34 @@
       }
     })();
 
-    // 登录处理（示例：固定密码 admin123）
+    // 登录处理（示例：前端静态校验）
     loginForm.addEventListener('submit', async (e) => {
       e.preventDefault();
       loginMsg.style.display = 'none';
+      const user = usernameInput.value.trim();
       const pw = passwordInput.value.trim();
-      if (!pw) { showMsg(loginMsg, '请输入密码'); return; }
+      if (!user || !pw) { showMsg(loginMsg, '请输入账��和密码'); return; }
 
       // 真实项目请用后端认证；这里只是示例/本地演示
-      if (pw === 'admin123') {
+      if (user === ADMIN_USER && pw === ADMIN_PW) {
         // 登录成功
         if (rememberMe.checked) localStorage.setItem(KEY_AUTH, 'true');
         showMain();
       } else {
-        showMsg(loginMsg, '密码错误');
+        showMsg(loginMsg, '账号或密码错误');
       }
     });
 
-    // ��速 PIN：弹窗保存
+    // 快速 PIN：弹窗保存
     btnSetPin.addEventListener('click', () => {
       pinModal.classList.remove('hidden');
       pinModal.style.display = 'flex';
       pinInput.value = '';
       pinMsg.style.display = 'none';
       setTimeout(() => pinInput.focus(), 100);
+
+      // 恢复保存行为
+      pinSave.onclick = null;
     });
 
     pinCancel.addEventListener('click', () => {
